@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   crowdsec:
-    image: crowdsecurity/crowdsec:latest
+    image: crowdsecurity/crowdsec:latest@sha256:2f527c9bb8b367120eb08b82890aa912ce96bfa1ada93dda0721700e4b4e0dde
     environment:
       COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik"
     volumes:
@@ -23,7 +23,7 @@ services:
       - source: crowdsec_acquis
         target: /etc/crowdsec/acquis.yaml
   bouncer-traefik:
-    image: docker.io/fbonalair/traefik-crowdsec-bouncer:latest
+    image: docker.io/fbonalair/traefik-crowdsec-bouncer:latest@sha256:e3e8f33923d2871069de08dd2931a9eb6c6760f76d6b9e3229d3b9c84211dd94
     environment:
       CROWDSEC_BOUNCER_API_KEY: ${CROWDSEC_BOUNCER_API_KEY}
       CROWDSEC_AGENT_HOST: crowdsec_crowdsec:8080
