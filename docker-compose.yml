@@ -18,7 +18,9 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: on-failure
+        condition: any
+        delay: 5s
+        max_attempts: 0
     configs:
       - source: crowdsec_acquis
         target: /etc/crowdsec/acquis.yaml
@@ -38,7 +40,9 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: on-failure
+        condition: any
+        delay: 5s
+        max_attempts: 0
     
 
 networks:
