@@ -22,7 +22,7 @@ services:
         delay: 5s
         max_attempts: 0
     configs:
-      - source: crowdsec_acquis
+      - source: crowdsec_acquis_access_v2
         target: /etc/crowdsec/acquis.yaml
   bouncer-traefik:
     image: docker.io/fbonalair/traefik-crowdsec-bouncer:latest@sha256:e3e8f33923d2871069de08dd2931a9eb6c6760f76d6b9e3229d3b9c84211dd94
@@ -56,5 +56,6 @@ volumes:
     external: true
     name: traefik_traefik-logs
 configs:
-  crowdsec_acquis:
-    external: true
+  crowdsec_acquis_access_v2:
+    name: crowdsec_acquis_access_v2
+    file: ./config/acquis.yml

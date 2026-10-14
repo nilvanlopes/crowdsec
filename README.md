@@ -11,7 +11,7 @@ O fluxo nesta stack é:
 
 1. o Traefik grava logs no volume `traefik_traefik-logs`
 2. o container `crowdsec` monta esse volume em modo leitura
-3. o arquivo `acquis.yml` instrui o CrowdSec a ler `/var/log/traefik/*`
+3. o arquivo `acquis.yml` instrui o CrowdSec a ler somente os arquivos de acesso do Traefik (`*access*.log`)
 4. o serviço `bouncer-traefik` consulta a API do CrowdSec
 5. o Traefik usa o middleware `crowdsec@file` para chamar o bouncer em `http://bouncer-traefik:8080/api/v1/forwardAuth`
 
@@ -30,7 +30,7 @@ Antes de subir o CrowdSec, estes pré-requisitos precisam existir:
 2. rede overlay `traefik-public`
 3. stack do Traefik já implantada
 4. volume externo `traefik_traefik-logs` existente
-5. config Docker Swarm `crowdsec_acquis` criada a partir de `config/acquis.yml`
+5. arquivo `config/acquis.yml` disponível no checkout
 
 Sem isso, o deploy falha ou sobe parcialmente.
 
@@ -94,36 +94,15 @@ Se precisar criar manualmente:
 docker network create --driver=overlay --attachable traefik-public
 ```
 
-### 4. Crie a config externa `crowdsec_acquis`
+### 4. Configuração de aquisição versionada
 
-O arquivo [`docker-compose.yml`](/mnt/d/docker/crowdsec/docker-compose.yml) declara `crowdsec_acquis` como config externa. Isso significa que ela precisa existir no Swarm antes do deploy:
+O Compose cria `crowdsec_acquis_access_v2` a partir de `config/acquis.yml`
+no deploy. Não é necessário criar a config manualmente. Ela coleta somente
+`/var/log/traefik/*access*.log`, incluindo os acessos públicos e locais.
 
-```bash
-docker config create crowdsec_acquis crowdsec/config/acquis.yml
-```
+Configs Swarm são imutáveis. Para alterar a aquisição, crie uma config com novo sufixo de versão, atualize o nome em `docker-compose.yml` e redeploye. Não remova a config antiga enquanto algum serviço ainda a usa.
 
-Validação:
-
-```bash
-docker config ls | rg "crowdsec_acquis"
-```
-
-Se a config já existir e você alterar `config/acquis.yml`, o caminho mais seguro é:
-
-1. remover a config antiga
-2. recriá-la
-3. redeployar o stack
-
-Exemplo:
-
-```bash
-docker config rm crowdsec_acquis
-docker config create crowdsec_acquis crowdsec/config/acquis.yml
-make deploy-crowdsec
-```
-
-Importante:
-remover uma config em uso pode falhar enquanto houver serviços consumindo-a. Nesse caso, remova ou atualize o stack antes.
+`make deploy-crowdsec` faz o deploy normal depois que a config versionada existe no Swarm.
 
 ### 5. Prepare o arquivo `.env`
 
@@ -272,7 +251,7 @@ Definido em [`docker-compose.yml`](/mnt/d/docker/crowdsec/docker-compose.yml), e
 - monta o banco local em `crowdsec-db`
 - monta a configuração persistente em `crowdsec-config`
 - monta os logs do Traefik em `/var/log/traefik` como somente leitura
-- lê a config `crowdsec_acquis` em `/etc/crowdsec/acquis.yaml`
+- lê a config `crowdsec_acquis_access_v2` em `/etc/crowdsec/acquis.yaml`
 
 ### Serviço `bouncer-traefik`
 
@@ -285,16 +264,16 @@ Também definido em [`docker-compose.yml`](/mnt/d/docker/crowdsec/docker-compose
 
 ### Arquivo `config/acquis.yml`
 
-O conteúdo atual é:
+O conteúdo atual seleciona arquivos de acesso do Traefik:
 
 ```yaml
 filenames:
-  - /var/log/traefik/*
+  - /var/log/traefik/*access*.log
 labels:
   type: traefik
 ```
 
-Isso diz ao CrowdSec para tratar esses arquivos como logs do Traefik.
+Isso inclui nomes como `publicaccess.log` e `newaccess-local.log` e exclui o log de depuração `traefik.log`.
 
 ## Como Ativar o Middleware Nos Serviços
 
@@ -349,16 +328,11 @@ docker exec <container-do-crowdsec> cscli bouncers list
 
 ## Troubleshooting
 
-### Erro: `config not found: crowdsec_acquis`
+### Falha ao criar ou atualizar a config de aquisição
 
-Causa:
-a config externa não foi criada no Swarm.
-
-Correção:
-
-```bash
-docker config create crowdsec_acquis crowdsec/config/acquis.yml
-```
+Verifique se `config/acquis.yml` está no checkout e execute `make deploy-crowdsec`.
+Se mudou o conteúdo de uma config já implantada, use um novo nome versionado no
+Compose; Swarm não permite alterar o conteúdo de uma config existente.
 
 ### Erro: `CROWDSEC_BOUNCER_API_KEY is not provided`
 
@@ -403,7 +377,7 @@ Se você estiver montando o ambiente do zero, a ordem mais segura é:
 1. inicializar o Swarm
 2. criar a rede `traefik-public`
 3. subir o Traefik
-4. criar a config `crowdsec_acquis`
+4. verificar `config/acquis.yml` (a config Swarm é criada no deploy)
 5. copiar `.env.example` para `.env`
 6. fazer o primeiro `make deploy-crowdsec`
 7. gerar a chave do bouncer via `cscli`
