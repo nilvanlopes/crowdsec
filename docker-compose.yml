@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   crowdsec:
-    image: crowdsecurity/crowdsec:latest@sha256:2f527c9bb8b367120eb08b82890aa912ce96bfa1ada93dda0721700e4b4e0dde
+    image: crowdsecurity/crowdsec:latest@sha256:65b74942f7e7ed5c60fde4ac15fc4ba715904c398c8b16dd451f4907d90347d4
     environment:
       COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik"
     volumes:
